@@ -9,7 +9,7 @@ class TableauPrepFlow:
     A class for interacting with Tableau Prep flows using the Tableau Server REST API.
     """
 
-    def __init__(self, server_url, personal_access_token):
+    def __init__(self, server_url, personal_access_token, tabpy_conn_string):
         """
         Constructor for the TableauPrepFlow class.
         Parameters:
@@ -24,6 +24,7 @@ class TableauPrepFlow:
             'X-Tableau-Auth': self.personal_access_token
         }
         self.site_id = self.get_site_id()
+        self.tabpy_conn_string = tabpy_conn_string
 
 
     def get_flow_ids(self, flow_name):
@@ -74,7 +75,7 @@ class TableauPrepFlow:
             script_args (list of str): The list of arguments to pass to the script.
         """
         # create the TabPy client
-        tabpy_client = tabpy_tools.Client('http://localhost:9004/')
+        tabpy_client = tabpy_tools.Client(f'{self.tabpy_conn_string}/')
 
         # deploy the script to TabPy
         tabpy_client.deploy(script_name, script_code)
