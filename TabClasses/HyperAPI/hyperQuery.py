@@ -60,11 +60,9 @@ class TableauDataSource:
     def append_rows(self, table_name, rows):
         """
         Appends rows to an existing table in the data source.
-
         Parameters:
             table_name (str): The name of the table to append rows to.
             rows (list of tuples): A list of tuples representing the rows to be appended.
-
         Returns:
             None
         """
@@ -84,6 +82,12 @@ class TableauDataSource:
             if len(row) != num_columns:
                 raise ValueError(f"Number of columns in row {row} does not match the number of columns in the table.")
 
+        # Check if the columns in the row match the columns in the table
+        table_columns = set(column.name for column in table.table_definition.columns)
+        row_columns = set(column[0] for column in table.table_definition.items())
+        if table_columns != row_columns:
+            raise ValueError("Columns in the row do not match the columns in the table.")
+
         # Append the rows to the table, rolling back the transaction if an error occurs
         with self.connection.begin():
             try:
@@ -96,11 +100,9 @@ class TableauDataSource:
     def update_rows(self, table_name, update_query):
         """
         Updates rows in an existing table in the data source.
-
         Parameters:
             table_name (str): The name of the table to update rows in.
             update_query (str): An SQL query string that specifies the rows to be updated and their new values.
-
         Returns:
             None
         """
@@ -110,6 +112,12 @@ class TableauDataSource:
         table = self.connection.catalog.get_table(table_name)
         if table is None:
             raise ValueError(f"Table {table_name} does not exist in the data source.")
+
+        # Check if the columns in the update query match the columns in the table
+        update_columns = set(column.split('=')[0].strip() for column in update_query.split(',') if '=' in column)
+        table_columns = set(column.name for column in table.table_definition.columns)
+        if update_columns != table_columns:
+            raise ValueError("Columns in the update query do not match the columns in the table.")
 
         # Update the rows in the table, rolling back the transaction if an error occurs
         with self.connection.begin():
@@ -152,3 +160,24 @@ class TableauDataSource:
             if ds.name == datasource_name:
                 return ds.id
         raise ValueError(f"Could not find data source with name {datasource_name}")
+
+    def get_schema(self, table_name):
+        """
+        Returns the schema for a table in the data source.
+        Parameters:
+            table_name (str): The name of the table to retrieve the schema for.
+        Returns:
+            dict: A dictionary containing the names and data types of the columns in the table.
+        """
+        self.connect()
+
+        # Check if the specified table exists in the data source
+        table = self.connection.catalog.get_table(table_name)
+        if table is None:
+            raise ValueError(f"Table {table_name} does not exist in the data source.")
+
+        # Get the schema for the table
+        schema = {}
+        for column in table.table_definition.columns:
+            schema[column.name] = column.type
+        return schema
